@@ -24,6 +24,11 @@ interface Level {
 }
 
 interface Score {
+  addition: number;
+  subtraction: number;
+  multiplication: number;
+  division: number;
+  mentalCalculation: number;
   totalProblems: {
     addition: number;
     subtraction: number;
@@ -32,6 +37,7 @@ interface Score {
     mentalCalculation: number;
   };
 }
+
 function App() {
   const levels: Level[] = [
     { grade: "10級", description: "2-4桁の基本計算" },
@@ -58,6 +64,11 @@ function App() {
     }))
   );
   const [score, setScore] = useState<Score>({
+    addition: 0,
+    subtraction: 0,
+    multiplication: 0,
+    division: 0,
+    mentalCalculation: 0,
     totalProblems: {
       addition: 0,
       subtraction: 0,
@@ -73,7 +84,7 @@ function App() {
     operator: '+',
     timeStarted: Date.now()
   });
-  const [timeRemaining, setTimeRemaining] = useState(0);
+  const [timeRemaining, setTimeRemaining] = useState(60);
   const [activeBead, setActiveBead] = useState<{
     rodIndex: number;
     isHeaven: boolean;
@@ -316,6 +327,11 @@ function App() {
           [operationType]: prev.totalProblems[operationType] + 1
         }
       }));
+
+      // Check if user should advance to next level
+      if (score.totalProblems[operationType] >= 10 && currentLevel < levels.length) {
+        setCurrentLevel(currentLevel + 1);
+      }
 
       setShowSuccess(true);
       setTimeout(() => {
