@@ -2,26 +2,82 @@
 <html>
 <head>
   <title>Soroban Problem Generation Test</title>
-  <script>
-    function testGrade(grade) {
+  <script type="module">
+    import { levels, generateNewProblem } from './App';
+
+    function verifyProblem(problem, grade) {
+      const level = levels.find(l => l.grade === grade);
+      console.log(`Problem: ${problem.operands.join(' ' + problem.operator + ' ')}`);
+
+      // Verify digit counts
+      problem.operands.forEach((operand, i) => {
+        const digits = Math.abs(operand).toString().length;
+        console.log(`Operand ${i + 1}: ${operand} (${digits} digits)`);
+
+        if (problem.operator === "×") {
+          const expectedDigits = level.operations.multiplication?.digits;
+          console.assert(digits === expectedDigits,
+            `Expected ${expectedDigits} digits for multiplication, got ${digits}`);
+        } else if (problem.operator === "÷") {
+          const expected = i === 0 ? level.operations.division?.numeratorDigits : level.operations.division?.denominatorDigits;
+          console.assert(digits === expected,
+            `Expected ${expected} digits for division operand ${i + 1}, got ${digits}`);
+        } else {
+          console.assert(digits >= level.minDigits && digits <= level.maxDigits,
+            `Expected ${level.minDigits}-${level.maxDigits} digits, got ${digits}`);
+        }
+      });
+    }
+
+    function testGrade(gradeNum) {
       console.clear();
+      const grade = gradeNum + "級";
       console.log(`Testing grade ${grade}...`);
-      // Simulate 5 problems for this grade
+
+      // Test 5 problems for this grade
       for (let i = 0; i < 5; i++) {
         console.log(`\nProblem ${i + 1}:`);
-        generateNewProblem();
+        const problem = generateNewProblem(gradeNum);
+        verifyProblem(problem, grade);
       }
     }
+
+    window.testGrade = testGrade;
   </script>
 </head>
 <body>
   <h1>Soroban Problem Generation Test</h1>
-  <div>
-    <button onclick="testGrade(1)">Test Grade 10</button>
-    <button onclick="testGrade(10)">Test Grade 1</button>
+  <div class="controls">
+    <h2>Test Individual Grades</h2>
+    <div class="grade-buttons">
+      <button onclick="testGrade(10)">Test Grade 10 (初級)</button>
+      <button onclick="testGrade(6)">Test Grade 6 (中級)</button>
+      <button onclick="testGrade(1)">Test Grade 1 (上級)</button>
+    </div>
+    <h2>Test All Grades</h2>
+    <button onclick="[1,2,3,4,5,6,7,8,9,10].forEach(g => testGrade(g))">Test All Grades</button>
   </div>
-  <div>
+  <div class="instructions">
     <p>Open browser console (F12) to see test results</p>
+    <p>Expected ranges:</p>
+    <ul>
+      <li>Grade 10-9: 2-4 digit addition/subtraction</li>
+      <li>Grade 8-7: + multiplication (2 digits)</li>
+      <li>Grade 6: + multiplication (3×3), division (6÷3)</li>
+      <li>Grade 5: + multiplication (4×4), division (8÷4)</li>
+      <li>Grade 4: + multiplication (5×5), division (10÷5)</li>
+      <li>Grade 3: + multiplication (6×6), division (12÷6)</li>
+      <li>Grade 2: + multiplication (7×7), division (14÷7)</li>
+      <li>Grade 1: + multiplication (8×8), division (16÷8)</li>
+    </ul>
   </div>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    .controls { margin: 20px 0; }
+    .grade-buttons { display: flex; gap: 10px; margin: 10px 0; }
+    button { padding: 10px; margin: 5px; }
+    .instructions { margin-top: 20px; }
+    ul { margin-top: 10px; }
+  </style>
 </body>
 </html>
