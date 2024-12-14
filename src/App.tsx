@@ -21,6 +21,8 @@ interface Level {
   minDigits: number;
   maxDigits: number;
   operations: {
+    addition?: { enabled: boolean };
+    subtraction?: { enabled: boolean };
     multiplication?: { digits: number };
     division?: { numeratorDigits: number; denominatorDigits: number };
     mentalCalculation?: { lines: number };
@@ -44,16 +46,126 @@ interface Score {
 
 function App() {
   const levels: Level[] = [
-    { grade: "10級", minDigits: 2, maxDigits: 4, operations: {} },
-    { grade: "9級", minDigits: 2, maxDigits: 4, operations: {} },
-    { grade: "8級", minDigits: 2, maxDigits: 4, operations: {} },
-    { grade: "7級", minDigits: 2, maxDigits: 4, operations: {} },
-    { grade: "6級", minDigits: 3, maxDigits: 6, operations: { multiplication: { digits: 3 }, division: { numeratorDigits: 6, denominatorDigits: 3 }, mentalCalculation: { lines: 3 } } },
-    { grade: "5級", minDigits: 4, maxDigits: 8, operations: { multiplication: { digits: 4 }, division: { numeratorDigits: 8, denominatorDigits: 4 }, mentalCalculation: { lines: 5 } } },
-    { grade: "4級", minDigits: 5, maxDigits: 10, operations: { multiplication: { digits: 5 }, division: { numeratorDigits: 10, denominatorDigits: 5 }, mentalCalculation: { lines: 7 } } },
-    { grade: "3級", minDigits: 6, maxDigits: 12, operations: { multiplication: { digits: 6 }, division: { numeratorDigits: 12, denominatorDigits: 6 }, mentalCalculation: { lines: 9 } } },
-    { grade: "2級", minDigits: 7, maxDigits: 14, operations: { multiplication: { digits: 7 }, division: { numeratorDigits: 14, denominatorDigits: 7 }, mentalCalculation: { lines: 12 } } },
-    { grade: "1級", minDigits: 8, maxDigits: 16, operations: { multiplication: { digits: 8 }, division: { numeratorDigits: 16, denominatorDigits: 8 }, mentalCalculation: { lines: 15 } } }
+    {
+      grade: "10級",
+      minDigits: 2,
+      maxDigits: 4,
+      operations: {
+        addition: { enabled: true },
+        subtraction: { enabled: true },
+        multiplication: { digits: 2 },
+        division: { numeratorDigits: 4, denominatorDigits: 2 },
+        mentalCalculation: { lines: 3 }
+      }
+    },
+    {
+      grade: "9級",
+      minDigits: 2,
+      maxDigits: 4,
+      operations: {
+        addition: { enabled: true },
+        subtraction: { enabled: true },
+        multiplication: { digits: 2 },
+        division: { numeratorDigits: 4, denominatorDigits: 2 },
+        mentalCalculation: { lines: 3 }
+      }
+    },
+    {
+      grade: "8級",
+      minDigits: 2,
+      maxDigits: 4,
+      operations: {
+        addition: { enabled: true },
+        subtraction: { enabled: true },
+        multiplication: { digits: 3 },
+        division: { numeratorDigits: 5, denominatorDigits: 2 },
+        mentalCalculation: { lines: 3 }
+      }
+    },
+    {
+      grade: "7級",
+      minDigits: 2,
+      maxDigits: 4,
+      operations: {
+        addition: { enabled: true },
+        subtraction: { enabled: true },
+        multiplication: { digits: 3 },
+        division: { numeratorDigits: 6, denominatorDigits: 3 },
+        mentalCalculation: { lines: 3 }
+      }
+    },
+    {
+      grade: "6級",
+      minDigits: 3,
+      maxDigits: 5,
+      operations: {
+        addition: { enabled: true },
+        subtraction: { enabled: true },
+        multiplication: { digits: 3 },
+        division: { numeratorDigits: 6, denominatorDigits: 3 },
+        mentalCalculation: { lines: 3 }
+      }
+    },
+    {
+      grade: "5級",
+      minDigits: 3,
+      maxDigits: 6,
+      operations: {
+        addition: { enabled: true },
+        subtraction: { enabled: true },
+        multiplication: { digits: 4 },
+        division: { numeratorDigits: 8, denominatorDigits: 4 },
+        mentalCalculation: { lines: 5 }
+      }
+    },
+    {
+      grade: "4級",
+      minDigits: 4,
+      maxDigits: 7,
+      operations: {
+        addition: { enabled: true },
+        subtraction: { enabled: true },
+        multiplication: { digits: 5 },
+        division: { numeratorDigits: 10, denominatorDigits: 5 },
+        mentalCalculation: { lines: 7 }
+      }
+    },
+    {
+      grade: "3級",
+      minDigits: 5,
+      maxDigits: 8,
+      operations: {
+        addition: { enabled: true },
+        subtraction: { enabled: true },
+        multiplication: { digits: 6 },
+        division: { numeratorDigits: 12, denominatorDigits: 6 },
+        mentalCalculation: { lines: 9 }
+      }
+    },
+    {
+      grade: "2級",
+      minDigits: 6,
+      maxDigits: 9,
+      operations: {
+        addition: { enabled: true },
+        subtraction: { enabled: true },
+        multiplication: { digits: 7 },
+        division: { numeratorDigits: 14, denominatorDigits: 7 },
+        mentalCalculation: { lines: 12 }
+      }
+    },
+    {
+      grade: "1級",
+      minDigits: 7,
+      maxDigits: 10,
+      operations: {
+        addition: { enabled: true },
+        subtraction: { enabled: true },
+        multiplication: { digits: 8 },
+        division: { numeratorDigits: 16, denominatorDigits: 8 },
+        mentalCalculation: { lines: 15 }
+      }
+    }
   ];
 
   const [currentLevel, setCurrentLevel] = useState<number>(1);
@@ -132,6 +244,9 @@ function App() {
     const level = levels[currentLevel - 1];
     const grade = level.grade as keyof typeof timeLimits;
 
+    // Debug logging for problem generation
+    console.log(`Generating problem for grade: ${grade}`);
+
     // Generate a random number with specified number of digits
     const generateOperand = (minDigits: number, maxDigits: number) => {
       const digits = Math.floor(Math.random() * (maxDigits - minDigits + 1)) + minDigits;
@@ -151,29 +266,80 @@ function App() {
 
     let operands: number[];
     if (operation === "見取算") {
-      // Generate mental calculation problem with multiple operands
       const numLines = level.operations.mentalCalculation?.lines || 3;
-      operands = Array.from({ length: numLines }, () =>
-        generateOperand(level.minDigits, Math.min(level.maxDigits, 8))
-      );
+      const signs = Array.from({ length: numLines }, () => Math.random() < 0.5 ? 1 : -1);
+      operands = Array.from({ length: numLines }, (_, i) => {
+        const num = generateOperand(level.minDigits, Math.min(level.maxDigits, 8));
+        console.log(`Mental calc line ${i + 1}/${numLines}: ${signs[i] > 0 ? '+' : '-'}${num}`);
+        return num * signs[i];
+      });
     } else if (operation === "×") {
-      // Multiplication: both operands same size
       const digits = level.operations.multiplication?.digits || level.minDigits;
       const a = generateOperand(digits, digits);
       const b = generateOperand(digits, digits);
+      console.log(`Multiplication: ${a} × ${b} (${a.toString().length}×${b.toString().length} digits)`);
       operands = [a, b];
     } else if (operation === "÷") {
-      // Division: result should be whole number
-      const { numeratorDigits, denominatorDigits } = level.operations.division || { numeratorDigits: level.minDigits, denominatorDigits: level.minDigits };
-      const b = generateOperand(denominatorDigits, denominatorDigits);
-      const result = generateOperand(1, Math.floor(numeratorDigits / denominatorDigits)); // Result size based on division requirements
-      const a = b * result; // Ensure clean division
-      operands = [a, b];
+      const { numeratorDigits, denominatorDigits } = level.operations.division ||
+        { numeratorDigits: level.minDigits * 2, denominatorDigits: level.minDigits };
+
+      const divisor = generateOperand(denominatorDigits, denominatorDigits);
+      const quotientDigits = numeratorDigits - denominatorDigits;
+      const quotient = generateOperand(
+        Math.max(1, quotientDigits),
+        Math.max(2, quotientDigits)
+      );
+      const dividend = divisor * quotient;
+      console.log(`Division: ${dividend} ÷ ${divisor} (${dividend.toString().length}÷${divisor.toString().length} digits)`);
+      operands = [dividend, divisor];
     } else {
-      // Addition/Subtraction
       const a = generateOperand(level.minDigits, level.maxDigits);
       const b = generateOperand(level.minDigits, level.maxDigits);
-      operands = operation === "-" ? [Math.max(a, b), Math.min(a, b)] : [a, b];
+
+      if (operation === "-") {
+        const aStr = Math.max(a, b).toString();
+        const bStr = Math.min(a, b).toString();
+        let needsBorrowing = false;
+
+        for (let i = 0; i < Math.min(aStr.length, bStr.length); i++) {
+          const digitA = parseInt(aStr[aStr.length - 1 - i]);
+          const digitB = parseInt(bStr[bStr.length - 1 - i]);
+          if (digitA < digitB) {
+            needsBorrowing = true;
+            break;
+          }
+        }
+
+        if (!needsBorrowing) {
+          const newB = parseInt(bStr.slice(0, -1) + '9');
+          operands = [Math.max(a, newB), Math.min(a, newB)];
+        } else {
+          operands = [Math.max(a, b), Math.min(a, b)];
+        }
+        console.log(`Subtraction: ${operands[0]} - ${operands[1]} (requires borrowing: ${needsBorrowing})`);
+      } else {
+        const aStr = a.toString();
+        const bStr = b.toString();
+        let hasCarry = false;
+
+        for (let i = 0; i < Math.min(aStr.length, bStr.length); i++) {
+          const digitA = parseInt(aStr[aStr.length - 1 - i]);
+          const digitB = parseInt(bStr[bStr.length - 1 - i]);
+          if (digitA + digitB >= 10) {
+            hasCarry = true;
+            break;
+          }
+        }
+
+        if (!hasCarry) {
+          const newA = parseInt(aStr.slice(0, -1) + '9');
+          const newB = parseInt(bStr.slice(0, -1) + '9');
+          operands = [newA, newB];
+        } else {
+          operands = [a, b];
+        }
+        console.log(`Addition: ${operands[0]} + ${operands[1]} (requires carrying: ${hasCarry})`);
+      }
     }
 
     setCurrentProblem({
@@ -181,7 +347,6 @@ function App() {
       operands
     });
 
-    // Reset rods and current value
     const newRods = Array.from({ length: 8 }, (_, i) => ({
       id: `rod-${i}`,
       heavenBeads: Array.from({ length: 1 }, (_, j) => ({ id: `heaven-${i}-${j}`, active: false })),
@@ -190,7 +355,6 @@ function App() {
 
     setRods(newRods);
     setCurrentValue(0);
-    // Set time limit based on current grade
     const currentGrade = levels[currentLevel - 1].grade;
     setTimeRemaining(timeLimits[currentGrade as keyof typeof timeLimits]);
   };
@@ -271,6 +435,22 @@ function App() {
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold mb-8 text-center">そろばん練習 - {levels[currentLevel - 1].grade}</h1>
 
+        <div className="flex flex-wrap justify-center gap-2 mb-8">
+          {levels.reverse().map((level, index) => (
+            <button
+              key={level.grade}
+              className={`px-4 py-2 rounded-lg ${
+                currentLevel === levels.length - index
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-200 hover:bg-gray-300'
+              }`}
+              onClick={() => setCurrentLevel(levels.length - index)}
+            >
+              {level.grade}
+            </button>
+          ))}
+        </div>
+
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
           <div className="flex justify-between items-center mb-4">
             <div className="text-xl">
@@ -296,7 +476,7 @@ function App() {
                       className={`w-8 h-4 border border-gray-400 cursor-pointer ${
                         bead.active ? 'bg-blue-500' : 'bg-white'
                       }`}
-                      onClick={() => moveBead(rodIndex, true, beadIndex)}
+                      onClick={() => handleBeadClick(rodIndex, true, beadIndex)}
                     />
                   ))}
                 </div>
@@ -308,7 +488,7 @@ function App() {
                       className={`w-8 h-4 border border-gray-400 cursor-pointer ${
                         bead.active ? 'bg-blue-500' : 'bg-white'
                       }`}
-                      onClick={() => moveBead(rodIndex, false, beadIndex)}
+                      onClick={() => handleBeadClick(rodIndex, false, beadIndex)}
                     />
                   ))}
                 </div>

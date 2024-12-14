@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Soroban Problem Generation Test</title>
+  <script>
+    function testGrade(grade) {
+      console.clear();
+      console.log(`Testing grade ${grade}...`);
+      // Simulate 5 problems for this grade
+      for (let i = 0; i < 5; i++) {
+        console.log(`\nProblem ${i + 1}:`);
+        generateNewProblem();
+      }
+    }
+  </script>
+</head>
+<body>
+  <h1>Soroban Problem Generation Test</h1>
+  <div>
+    <button onclick="testGrade(1)">Test Grade 10</button>
+    <button onclick="testGrade(10)">Test Grade 1</button>
+  </div>
+  <div>
+    <p>Open browser console (F12) to see test results</p>
+  </div>
+</body>
+</html>
