@@ -88,13 +88,6 @@ function App() {
     operator: '+'
   });
   const [timeRemaining, setTimeRemaining] = useState(60);
-  const [activeBead, setActiveBead] = useState<{
-    rodIndex: number;
-    isHeaven: boolean;
-    beadIndex: number;
-  } | null>(null);
-  const [showTimeWarning, setShowTimeWarning] = useState<boolean>(false);
-  const [timeExpired, setTimeExpired] = useState<boolean>(false);
 
   // Time limits for each grade (in seconds)
   const timeLimits = {
@@ -114,8 +107,6 @@ function App() {
     generateNewProblem();
     const currentGrade = levels[currentLevel - 1].grade;
     setTimeRemaining(timeLimits[currentGrade as keyof typeof timeLimits]);
-    setShowTimeWarning(false);
-    setTimeExpired(false);
   }, [currentLevel]);
 
   // Add time limit enforcement
@@ -125,14 +116,11 @@ function App() {
         setTimeRemaining(prev => {
           const newTime = prev - 1;
           if (newTime <= 0) {
-            setTimeExpired(true);
             setTimeout(() => {
-              setTimeExpired(false);
               generateNewProblem();
             }, 1500);
             return 0;
           }
-          setShowTimeWarning(newTime <= 10);
           return newTime;
         });
       }, 1000);
@@ -207,15 +195,7 @@ function App() {
     setTimeRemaining(timeLimits[currentGrade as keyof typeof timeLimits]);
   };
 
-  const handleBeadMouseDown = (rodIndex: number, isHeaven: boolean, beadIndex: number) => {
-    if (activeBead) return; // Only allow one bead movement at a time
-    setActiveBead({ rodIndex, isHeaven, beadIndex });
-    const rod = rods[rodIndex];
-    moveBead(rod.id, isHeaven ? rod.heavenBeads[beadIndex].id : rod.earthBeads[beadIndex].id, isHeaven);
-  };
-
-  const moveBead = (rodIndex: number, isHeaven: boolean, beadIndex: number) => {
-    // Create a copy of rods with updated bead states
+  const handleBeadClick = (rodIndex: number, isHeaven: boolean, beadIndex: number) => {
     const newRods = rods.map((rod, i) => ({
       ...rod,
       heavenBeads: rod.heavenBeads.map((bead, j) => ({
@@ -228,15 +208,17 @@ function App() {
       }))
     }));
 
-    // Calculate total value based on active beads
+    setRods(newRods);
+    updateCurrentValue(newRods);
+  };
+
+  const updateCurrentValue = (currentRods: Rod[]) => {
     let total = 0;
-    newRods.forEach((rod, i) => {
+    currentRods.forEach((rod, i) => {
       const heavenValue = rod.heavenBeads.filter(b => b.active).length * 5;
       const earthValue = rod.earthBeads.filter(b => b.active).length;
       total += (heavenValue + earthValue) * Math.pow(10, 7 - i);
     });
-
-    setRods(newRods);
     setCurrentValue(total);
 
     // Check if the answer is correct
