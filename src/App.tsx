@@ -1,10 +1,8 @@
-import { useState, useEffect } from 'react'
-import { Trophy } from "lucide-react"
+import { useState, useEffect } from "react";
 
 interface Problem {
   operator: "+" | "-" | "×" | "÷" | "見取算";
   operands: number[];
-  timeStarted: number;
 }
 
 interface Bead {
@@ -20,7 +18,13 @@ interface Rod {
 
 interface Level {
   grade: "1級" | "2級" | "3級" | "4級" | "5級" | "6級" | "7級" | "8級" | "9級" | "10級";
-  description: string;
+  minDigits: number;
+  maxDigits: number;
+  operations: {
+    multiplication?: { digits: number };
+    division?: { numeratorDigits: number; denominatorDigits: number };
+    mentalCalculation?: { lines: number };
+  };
 }
 
 interface Score {
@@ -40,16 +44,16 @@ interface Score {
 
 function App() {
   const levels: Level[] = [
-    { grade: "10級", description: "2-4桁の基本計算" },
-    { grade: "9級", description: "2-4桁の基本計算" },
-    { grade: "8級", description: "2-4桁の基本計算" },
-    { grade: "7級", description: "2-4桁の基本計算" },
-    { grade: "6級", description: "3桁×3桁, 6桁÷3桁, 見取算3行" },
-    { grade: "5級", description: "4桁×4桁, 8桁÷4桁, 見取算5行" },
-    { grade: "4級", description: "5桁×5桁, 10桁÷5桁, 見取算7行" },
-    { grade: "3級", description: "6桁×6桁, 12桁÷6桁, 見取算9行" },
-    { grade: "2級", description: "7桁×7桁, 14桁÷7桁, 見取算12行" },
-    { grade: "1級", description: "8桁×8桁, 16桁÷8桁, 見取算15行" },
+    { grade: "10級", minDigits: 2, maxDigits: 4, operations: {} },
+    { grade: "9級", minDigits: 2, maxDigits: 4, operations: {} },
+    { grade: "8級", minDigits: 2, maxDigits: 4, operations: {} },
+    { grade: "7級", minDigits: 2, maxDigits: 4, operations: {} },
+    { grade: "6級", minDigits: 3, maxDigits: 6, operations: { multiplication: { digits: 3 }, division: { numeratorDigits: 6, denominatorDigits: 3 }, mentalCalculation: { lines: 3 } } },
+    { grade: "5級", minDigits: 4, maxDigits: 8, operations: { multiplication: { digits: 4 }, division: { numeratorDigits: 8, denominatorDigits: 4 }, mentalCalculation: { lines: 5 } } },
+    { grade: "4級", minDigits: 5, maxDigits: 10, operations: { multiplication: { digits: 5 }, division: { numeratorDigits: 10, denominatorDigits: 5 }, mentalCalculation: { lines: 7 } } },
+    { grade: "3級", minDigits: 6, maxDigits: 12, operations: { multiplication: { digits: 6 }, division: { numeratorDigits: 12, denominatorDigits: 6 }, mentalCalculation: { lines: 9 } } },
+    { grade: "2級", minDigits: 7, maxDigits: 14, operations: { multiplication: { digits: 7 }, division: { numeratorDigits: 14, denominatorDigits: 7 }, mentalCalculation: { lines: 12 } } },
+    { grade: "1級", minDigits: 8, maxDigits: 16, operations: { multiplication: { digits: 8 }, division: { numeratorDigits: 16, denominatorDigits: 8 }, mentalCalculation: { lines: 15 } } }
   ];
 
   const [currentLevel, setCurrentLevel] = useState<number>(1);
@@ -80,9 +84,8 @@ function App() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [currentValue, setCurrentValue] = useState(0);
   const [currentProblem, setCurrentProblem] = useState<Problem>({
-    operands: [0],
-    operator: '+',
-    timeStarted: Date.now()
+    operands: [0, 0],
+    operator: '+'
   });
   const [timeRemaining, setTimeRemaining] = useState(60);
   const [activeBead, setActiveBead] = useState<{
@@ -90,8 +93,8 @@ function App() {
     isHeaven: boolean;
     beadIndex: number;
   } | null>(null);
-  const [showTimeWarning, setShowTimeWarning] = useState(false);
-  const [timeExpired, setTimeExpired] = useState(false);
+  const [showTimeWarning, setShowTimeWarning] = useState<boolean>(false);
+  const [timeExpired, setTimeExpired] = useState<boolean>(false);
 
   // Time limits for each grade (in seconds)
   const timeLimits = {
@@ -141,19 +144,6 @@ function App() {
     const level = levels[currentLevel - 1];
     const grade = level.grade as keyof typeof timeLimits;
 
-    // Determine digit limits based on grade
-    const getDigitLimits = (grade: string) => {
-      if (grade === "1級") return { min: 8, max: 16 };
-      if (grade === "2級") return { min: 7, max: 14 };
-      if (grade === "3級") return { min: 6, max: 12 };
-      if (grade === "4級") return { min: 5, max: 10 };
-      if (grade === "5級") return { min: 4, max: 8 };
-      if (grade === "6級") return { min: 3, max: 6 };
-      return { min: 2, max: 4 }; // 7級-10級
-    };
-
-    const digitLimits = getDigitLimits(grade);
-
     // Generate a random number with specified number of digits
     const generateOperand = (minDigits: number, maxDigits: number) => {
       const digits = Math.floor(Math.random() * (maxDigits - minDigits + 1)) + minDigits;
@@ -174,38 +164,33 @@ function App() {
     let operands: number[];
     if (operation === "見取算") {
       // Generate mental calculation problem with multiple operands
-      const numLines = grade === "1級" ? 15
-        : grade === "2級" ? 12
-        : grade === "3級" ? 9
-        : grade === "4級" ? 7
-        : grade === "5級" ? 5
-        : 3;
-
+      const numLines = level.operations.mentalCalculation?.lines || 3;
       operands = Array.from({ length: numLines }, () =>
-        generateOperand(digitLimits.min, Math.min(digitLimits.max, 8))
+        generateOperand(level.minDigits, Math.min(level.maxDigits, 8))
       );
     } else if (operation === "×") {
       // Multiplication: both operands same size
-      const a = generateOperand(digitLimits.min, Math.min(digitLimits.max, 8));
-      const b = generateOperand(digitLimits.min, Math.min(digitLimits.max, 8));
+      const digits = level.operations.multiplication?.digits || level.minDigits;
+      const a = generateOperand(digits, digits);
+      const b = generateOperand(digits, digits);
       operands = [a, b];
     } else if (operation === "÷") {
       // Division: result should be whole number
-      const b = generateOperand(digitLimits.min, Math.min(digitLimits.max, 8));
-      const result = generateOperand(1, 3); // Small result for realistic division
-      const a = b * result;
+      const { numeratorDigits, denominatorDigits } = level.operations.division || { numeratorDigits: level.minDigits, denominatorDigits: level.minDigits };
+      const b = generateOperand(denominatorDigits, denominatorDigits);
+      const result = generateOperand(1, Math.floor(numeratorDigits / denominatorDigits)); // Result size based on division requirements
+      const a = b * result; // Ensure clean division
       operands = [a, b];
     } else {
       // Addition/Subtraction
-      const a = generateOperand(digitLimits.min, digitLimits.max);
-      const b = generateOperand(digitLimits.min, digitLimits.max);
+      const a = generateOperand(level.minDigits, level.maxDigits);
+      const b = generateOperand(level.minDigits, level.maxDigits);
       operands = operation === "-" ? [Math.max(a, b), Math.min(a, b)] : [a, b];
     }
 
     setCurrentProblem({
       operator: operation,
-      operands,
-      timeStarted: Date.now()
+      operands
     });
 
     // Reset rods and current value
@@ -229,102 +214,60 @@ function App() {
     moveBead(rod.id, isHeaven ? rod.heavenBeads[beadIndex].id : rod.earthBeads[beadIndex].id, isHeaven);
   };
 
-  const handleBeadMouseMove = (e: React.MouseEvent, rodIndex: number, isHeaven: boolean, beadIndex: number) => {
-    if (!activeBead) return;
-    e.preventDefault();
-    const { rodIndex: activeRodIndex, isHeaven: activeIsHeaven } = activeBead;
+  const moveBead = (rodIndex: number, isHeaven: boolean, beadIndex: number) => {
+    // Create a copy of rods with updated bead states
+    const newRods = rods.map((rod, i) => ({
+      ...rod,
+      heavenBeads: rod.heavenBeads.map((bead, j) => ({
+        ...bead,
+        active: i === rodIndex && isHeaven && j === beadIndex ? !bead.active : bead.active
+      })),
+      earthBeads: rod.earthBeads.map((bead, j) => ({
+        ...bead,
+        active: i === rodIndex && !isHeaven && j === beadIndex ? !bead.active : bead.active
+      }))
+    }));
 
-    // Only allow movement within the same rod
-    if (rodIndex === activeRodIndex && isHeaven === activeIsHeaven) {
-      const rod = rods[rodIndex];
-      const beads = isHeaven ? rod.heavenBeads : rod.earthBeads;
-      const rect = (e.target as HTMLElement).getBoundingClientRect();
-      const mouseY = e.clientY - rect.top;
-      const totalHeight = rect.height * beads.length;
-      const relativeY = (mouseY / totalHeight) * beads.length;
-
-      // Calculate which bead should be activated based on mouse position
-      const newBeadIndex = Math.floor(relativeY);
-
-      // Ensure the bead index is within bounds
-      if (newBeadIndex !== beadIndex && newBeadIndex >= 0 && newBeadIndex < beads.length) {
-        moveBead(rod.id, beads[newBeadIndex].id, isHeaven);
-        setActiveBead({ rodIndex, isHeaven, beadIndex: newBeadIndex });
-      }
-    }
-  };
-
-  const handleBeadMouseUp = () => {
-    setActiveBead(null);
-  };
-
-  const moveBead = (rodId: string, beadId: string, isHeaven: boolean) => {
-    const newRods = rods.map(rod => {
-      if (rod.id === rodId) {
-        return {
-          ...rod,
-          heavenBeads: isHeaven
-            ? rod.heavenBeads.map(bead => ({
-                ...bead,
-                active: bead.id === beadId ? !bead.active : bead.active
-              }))
-            : rod.heavenBeads,
-          earthBeads: !isHeaven
-            ? rod.earthBeads.map(bead => ({
-                ...bead,
-                active: bead.id === beadId ? !bead.active : bead.active
-              }))
-            : rod.earthBeads
-        };
-      }
-      return rod;
+    // Calculate total value based on active beads
+    let total = 0;
+    newRods.forEach((rod, i) => {
+      const heavenValue = rod.heavenBeads.filter(b => b.active).length * 5;
+      const earthValue = rod.earthBeads.filter(b => b.active).length;
+      total += (heavenValue + earthValue) * Math.pow(10, 7 - i);
     });
 
     setRods(newRods);
-
-    // Calculate total value across all rods
-    const total = newRods.reduce((acc, rod, index) => {
-      const multiplier = Math.pow(10, rods.length - index - 1);
-      const heavenValue = rod.heavenBeads.reduce((sum, bead) =>
-        sum + (bead.active ? 5 : 0), 0);
-      const earthValue = rod.earthBeads.reduce((sum, bead) =>
-        sum + (bead.active ? 1 : 0), 0);
-      return acc + ((heavenValue + earthValue) * multiplier);
-    }, 0);
-
     setCurrentValue(total);
 
-    // Calculate expected result based on operation type
-    const { operator, operands } = currentProblem;
-    let expectedResult: number;
+    // Check if the answer is correct
+    const { operands, operator } = currentProblem;
+    let expectedResult = 0;
 
-    if (operator === "見取算") {
-      // Mental calculation (sequential addition/subtraction)
-      expectedResult = operands.reduce((acc, curr, index) => {
-        if (index === 0) return curr;
-        return acc + curr; // All numbers are added in mental calculation
-      }, 0);
-    } else {
-      const [a, b] = operands;
-      expectedResult = operator === "+" ? a + b :
-                      operator === "-" ? a - b :
-                      operator === "×" ? a * b :
-                      Math.floor(a / b); // Division
+    if (operator === "+") {
+      expectedResult = operands.reduce((a, b) => a + b, 0);
+    } else if (operator === "-") {
+      expectedResult = operands[0] - operands[1];
+    } else if (operator === "×") {
+      expectedResult = operands[0] * operands[1];
+    } else if (operator === "÷") {
+      expectedResult = Math.floor(operands[0] / operands[1]);
+    } else if (operator === "見取算") {
+      expectedResult = operands.reduce((a, b) => a + b, 0);
     }
 
-    // Check if answer is correct
     if (total === expectedResult) {
       const operationType = operator === "+" ? "addition" :
-                            operator === "-" ? "subtraction" :
-                            operator === "×" ? "multiplication" :
-                            operator === "÷" ? "division" :
-                            "mentalCalculation";
+                          operator === "-" ? "subtraction" :
+                          operator === "×" ? "multiplication" :
+                          operator === "÷" ? "division" :
+                          "mentalCalculation";
 
       setScore(prev => ({
         ...prev,
+        [operationType]: (prev[operationType] || 0) + 1,
         totalProblems: {
           ...prev.totalProblems,
-          [operationType]: prev.totalProblems[operationType] + 1
+          [operationType]: (prev.totalProblems[operationType] || 0) + 1
         }
       }));
 
@@ -337,122 +280,91 @@ function App() {
       setTimeout(() => {
         setShowSuccess(false);
         generateNewProblem();
-      }, 1000);
+      }, 1500);
     }
   };
 
   return (
-    <div className="container mx-auto p-4 min-h-screen bg-gray-50">
-      <div className="space-y-4">
-        {/* Level and Score Display */}
-        <div className="flex justify-between items-center p-4 bg-white rounded-lg shadow-sm">
-          <div className="text-2xl font-bold">レベル: <span className="text-purple-600">{levels[currentLevel - 1].grade}</span></div>
-          <div className="flex items-center gap-2">
-            <Trophy className="text-yellow-500 h-8 w-8" />
-            <span className="text-2xl font-bold">{score.totalProblems[currentProblem.operator === "見取算" ? "mentalCalculation" :
-              currentProblem.operator === "+" ? "addition" :
-              currentProblem.operator === "-" ? "subtraction" :
-              currentProblem.operator === "×" ? "multiplication" :
-              "division"]}</span>
-          </div>
-        </div>
+    <div className="min-h-screen bg-gray-100 p-8">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-3xl font-bold mb-8 text-center">そろばん練習 - {levels[currentLevel - 1].grade}</h1>
 
-        {/* Problem Display */}
-        <div className="p-4 bg-white rounded-lg shadow-sm">
-          <div className="text-2xl font-bold mb-4">
-            問題: <span className="text-blue-600">
-              {currentProblem.operator === "見取算" ? (
-                <div className="space-y-2">
-                  {currentProblem.operands.map((operand, index) => (
-                    <div key={index}>
-                      {index === 0 ? "" : index === 1 ? "-" : "+"} {operand.toLocaleString()}
-                    </div>
-                  ))}
-                  <div className="border-t-2 border-blue-600">= ?</div>
-                </div>
-              ) : (
-                <>
-                  {currentProblem.operands[0].toLocaleString()} {currentProblem.operator} {currentProblem.operands[1].toLocaleString()} = ?
-                </>
-              )}
-            </span>
-          </div>
-          <div className="text-xl">
-            現在の値: <span className="text-green-600">{currentValue.toLocaleString()}</span>
-          </div>
-          <div className={`text-xl ${showTimeWarning ? 'text-red-600 animate-pulse font-bold' : 'text-gray-600'}`}>
-            残り時間: {timeRemaining}秒
-          </div>
-          {timeExpired && (
-            <div className="text-center text-3xl text-red-600 font-bold mb-6 animate-bounce bg-red-50 py-4 rounded-lg">
-              時間切れ!
+        <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <div className="text-xl">
+              問題: {currentProblem.operands.map((num, i) => (
+                <span key={i}>
+                  {i > 0 && <span className="mx-2">{currentProblem.operator}</span>}
+                  {num.toLocaleString()}
+                </span>
+              ))}
             </div>
-          )}
-        </div>
+            <div className="text-xl">
+              現在値: {currentValue.toLocaleString()}
+            </div>
+          </div>
 
-        {/* Soroban Display */}
-        <div className="p-4 bg-white rounded-lg shadow-sm">
-          <div className="grid grid-cols-8 gap-4">
+          <div className="grid grid-cols-8 gap-4 mb-8">
             {rods.map((rod, rodIndex) => (
               <div key={rod.id} className="flex flex-col items-center">
-                <div className="text-sm text-gray-500">
-                  {Math.pow(10, 7 - rodIndex).toLocaleString()}
-                </div>
-                {/* Heaven Beads */}
-                <div className="relative h-8">
+                <div className="mb-2">
                   {rod.heavenBeads.map((bead, beadIndex) => (
                     <div
                       key={bead.id}
-                      className={`absolute w-14 h-7 rounded-full cursor-grab active:cursor-grabbing transition-transform duration-150 ease-in-out
-                        ${bead.active ? 'bg-blue-500 shadow-lg -translate-y-3' : 'bg-amber-600 hover:bg-amber-500'}
-                        ${activeBead?.rodIndex === rodIndex && activeBead?.isHeaven ? 'z-10' : 'z-0'}`}
-                      style={{
-                        top: `${beadIndex * 28}px`,
-                      }}
-                      onMouseDown={() => handleBeadMouseDown(rodIndex, true, beadIndex)}
-                      onMouseMove={(e) => handleBeadMouseMove(e, rodIndex, true, beadIndex)}
-                      onMouseUp={() => handleBeadMouseUp()}
-                      onMouseLeave={() => handleBeadMouseUp()}
+                      className={`w-8 h-4 border border-gray-400 cursor-pointer ${
+                        bead.active ? 'bg-blue-500' : 'bg-white'
+                      }`}
+                      onClick={() => moveBead(rodIndex, true, beadIndex)}
                     />
                   ))}
                 </div>
-                {/* Separator Bar */}
-                <div className="w-full h-1 bg-amber-800 my-2" />
-                {/* Earth Beads */}
-                <div className="relative h-32">
+                <div className="border-t-2 border-gray-400 w-full mb-2" />
+                <div>
                   {rod.earthBeads.map((bead, beadIndex) => (
                     <div
                       key={bead.id}
-                      className={`absolute w-14 h-7 rounded-full cursor-grab active:cursor-grabbing transition-transform duration-150 ease-in-out
-                        ${bead.active ? 'bg-blue-500 shadow-lg translate-y-3' : 'bg-amber-600 hover:bg-amber-500'}
-                        ${activeBead?.rodIndex === rodIndex && !activeBead?.isHeaven ? 'z-10' : 'z-0'}`}
-                      style={{
-                        top: `${beadIndex * 28}px`,
-                      }}
-                      onMouseDown={() => handleBeadMouseDown(rodIndex, false, beadIndex)}
-                      onMouseMove={(e) => handleBeadMouseMove(e, rodIndex, false, beadIndex)}
-                      onMouseUp={() => handleBeadMouseUp()}
-                      onMouseLeave={() => handleBeadMouseUp()}
+                      className={`w-8 h-4 border border-gray-400 cursor-pointer ${
+                        bead.active ? 'bg-blue-500' : 'bg-white'
+                      }`}
+                      onClick={() => moveBead(rodIndex, false, beadIndex)}
                     />
                   ))}
+                </div>
+                <div className="mt-2 text-sm text-gray-600">
+                  {Math.pow(10, 7 - rodIndex).toLocaleString()}
                 </div>
               </div>
             ))}
           </div>
+
+          <div className="flex justify-between items-center">
+            <div className="text-lg">
+              時間: {timeRemaining}秒
+            </div>
+            <div className="text-lg">
+              スコア: {Object.entries(score.totalProblems).map(([type, total], i) => (
+                <span key={type}>
+                  {i > 0 && ' | '}
+                  {type}: {score[type as keyof Omit<Score, 'totalProblems'>]}/{total}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
 
         {showSuccess && (
-          <div className="text-center text-3xl text-green-600 font-bold mb-6 animate-bounce bg-green-50 py-4 rounded-lg">
-            すごい! 正解です!
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="bg-white p-8 rounded-lg shadow-xl">
+              <h2 className="text-2xl font-bold mb-4">正解!</h2>
+              <button
+                className="bg-blue-500 text-white px-4 py-2 rounded"
+                onClick={() => setShowSuccess(false)}
+              >
+                次へ
+              </button>
+            </div>
           </div>
         )}
-
-        <button
-          className="w-full text-xl py-8 bg-blue-600 hover:bg-blue-700 transition-colors"
-          onClick={generateNewProblem}
-        >
-          新しい問題
-        </button>
       </div>
     </div>
   );
